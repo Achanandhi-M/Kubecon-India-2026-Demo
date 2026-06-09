@@ -1,0 +1,88 @@
+---
+# Policy 1: Block privileged containers
+# Stops container escape attempts post-RCE
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: block-privileged-containers
+spec:
+  validationFailureAction: Enforce
+  rules:
+  - name: block-privileged
+    match:
+      any:
+      - resources:
+          kinds: [Pod]
+    validate:
+      message: "Privileged containers are not allowed! Reduces blast radius."
+      pattern:
+        spec:
+          containers:
+          - =(securityContext):
+              =(privileged): "false"
+---
+# Policy 2: Require resource limits
+# Stops cryptominer from consuming the entire node
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-resource-limits
+spec:
+  validationFailureAction: Enforce
+  rules:
+  - name: check-limits
+    match:
+      any:
+      - resources:
+          kinds: [Pod]
+    validate:
+      message: "Resource limits required! Without them, a cryptominer can consume the entire node."
+      pattern:
+        spec:
+          containers:
+          - resources:
+              limits:
+                cpu: "?*"
+                memory: "?*"
+---
+# Policy 3: Require non-root user
+# If RCE happens, attacker gets limited user not root
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-non-root
+spec:
+  validationFailureAction: Enforce
+  rules:
+  - name: check-non-root
+    match:
+      any:
+      - resources:
+          kinds: [Pod]
+    validate:
+      message: "Containers must not run as root! Running as root gives attackers full container access."
+      pattern:
+        spec:
+          containers:
+          - securityContext:
+              runAsNonRoot: true
+---
+# Policy 4: Block SA token automount
+# Stops attacker from stealing K8s credentials after RCE
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: block-automount-sa-token
+spec:
+  validationFailureAction: Enforce
+  rules:
+  - name: check-automount
+    match:
+      any:
+      - resources:
+          kinds: [Pod]
+    validate:
+      message: "automountServiceAccountToken must be false! Mounting SA tokens gives attackers Kubernetes API access."
+      pattern:
+        spec:
+          automountServiceAccountToken: false

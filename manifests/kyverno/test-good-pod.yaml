@@ -1,0 +1,21 @@
+# test-good-pod.yaml
+# Expected: ALLOWED ✅ - satisfies all 4 Kyverno policies
+apiVersion: v1
+kind: Pod
+metadata:
+  name: good-pod
+  namespace: demo
+spec:
+  automountServiceAccountToken: false        # ✅ no SA token
+  containers:
+  - name: test
+    image: alpine
+    command: ["sleep", "3600"]
+    securityContext:
+      runAsNonRoot: true                     # ✅ non-root
+      runAsUser: 1000
+      privileged: false                      # ✅ not privileged
+    resources:
+      limits:
+        cpu: "200m"                          # ✅ resource limits set
+        memory: "128Mi"

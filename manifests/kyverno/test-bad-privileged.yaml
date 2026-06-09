@@ -1,0 +1,20 @@
+# test-bad-privileged.yaml
+# Expected: BLOCKED by block-privileged-containers policy
+apiVersion: v1
+kind: Pod
+metadata:
+  name: bad-pod-privileged
+  namespace: demo
+spec:
+  automountServiceAccountToken: false
+  containers:
+  - name: test
+    image: alpine
+    securityContext:
+      privileged: true
+      runAsNonRoot: true
+      runAsUser: 1000
+    resources:
+      limits:
+        cpu: "200m"
+        memory: "128Mi"

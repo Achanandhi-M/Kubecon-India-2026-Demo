@@ -1,0 +1,15 @@
+# test-bad-no-limits.yaml
+# Expected: BLOCKED by require-resource-limits policy
+apiVersion: v1
+kind: Pod
+metadata:
+  name: bad-pod-no-limits
+  namespace: demo
+spec:
+  automountServiceAccountToken: false
+  containers:
+  - name: test
+    image: alpine
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000

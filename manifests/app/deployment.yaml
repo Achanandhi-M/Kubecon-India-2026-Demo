@@ -1,0 +1,76 @@
+# Deploy vulnerable Next.js app with intentionally weak security (for demo only)
+# Replace YOUR_DOCKERHUB_USERNAME with your actual username
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: demo
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nextjs-sa
+  namespace: demo
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: demo-overpermissive
+rules:
+- apiGroups: [""]
+  resources: ["pods", "secrets", "serviceaccounts"]
+  verbs: ["get", "list", "create", "delete"]
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "list", "create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: demo-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: demo-overpermissive
+subjects:
+- kind: ServiceAccount
+  name: nextjs-sa
+  namespace: demo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nextjs-vulnerable
+  namespace: demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nextjs-vulnerable
+  template:
+    metadata:
+      labels:
+        app: nextjs-vulnerable
+    spec:
+      serviceAccountName: nextjs-sa
+      automountServiceAccountToken: true   # ⚠️ intentionally weak for demo
+      containers:
+      - name: nextjs
+        image: YOUR_DOCKERHUB_USERNAME/nextjs-vulnerable-app:v1
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3000
+        # ⚠️ intentionally NO resource limits for demo
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nextjs-service
+  namespace: demo
+spec:
+  selector:
+    app: nextjs-vulnerable
+  ports:
+  - port: 80
+    targetPort: 3000
+  type: ClusterIP
