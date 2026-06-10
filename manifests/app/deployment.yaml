@@ -1,5 +1,4 @@
 # Deploy vulnerable Next.js app with intentionally weak security (for demo only)
-# Replace YOUR_DOCKERHUB_USERNAME with your actual username
 ---
 apiVersion: v1
 kind: Namespace
@@ -17,12 +16,12 @@ kind: ClusterRole
 metadata:
   name: demo-overpermissive
 rules:
-- apiGroups: [""]
-  resources: ["pods", "secrets", "serviceaccounts"]
-  verbs: ["get", "list", "create", "delete"]
-- apiGroups: ["apps"]
-  resources: ["deployments"]
-  verbs: ["get", "list", "create"]
+  - apiGroups: [""]
+    resources: ["pods", "secrets", "serviceaccounts"]
+    verbs: ["get", "list", "create", "delete"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "create"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -33,9 +32,9 @@ roleRef:
   kind: ClusterRole
   name: demo-overpermissive
 subjects:
-- kind: ServiceAccount
-  name: nextjs-sa
-  namespace: demo
+  - kind: ServiceAccount
+    name: nextjs-sa
+    namespace: demo
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -53,14 +52,14 @@ spec:
         app: nextjs-vulnerable
     spec:
       serviceAccountName: nextjs-sa
-      automountServiceAccountToken: true   # ⚠️ intentionally weak for demo
+      automountServiceAccountToken: true # intentionally weak for demo
       containers:
-      - name: nextjs
-        image: YOUR_DOCKERHUB_USERNAME/nextjs-vulnerable-app:v1
-        imagePullPolicy: IfNotPresent
-        ports:
-        - containerPort: 3000
-        # ⚠️ intentionally NO resource limits for demo
+        - name: nextjs
+          image: achanandhi/nextjs-vulnerable-app:v2 # v2 has Server Action for exploit
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+          # intentionally NO resource limits for demo - shows CPU spike
 ---
 apiVersion: v1
 kind: Service
@@ -71,6 +70,7 @@ spec:
   selector:
     app: nextjs-vulnerable
   ports:
-  - port: 80
-    targetPort: 3000
-  type: ClusterIP
+    - port: 80
+      targetPort: 3000
+      nodePort: 30080 # NodePort so curl can reach it from outside the pod
+  type: NodePort

@@ -1,5 +1,19 @@
 customRules:
   custom-rules.yaml: |-
+    - rule: Reverse Shell Detected
+      desc: Detects a shell process spawned directly from the Node.js application process - classic reverse shell pattern from RCE exploitation
+      condition: >
+        spawned_process and container and
+        proc.name in (sh, bash, ash) and
+        proc.pname in (node, npm, next, next-server)
+      output: >
+        REVERSE SHELL spawned from application process! React2Shell RCE likely!
+        (user=%user.name shell=%proc.name parent=%proc.pname
+        command=%proc.cmdline pod=%k8s.pod.name ns=%k8s.ns.name
+        image=%container.image.repository)
+      priority: CRITICAL
+      tags: [T1059, reverse-shell, container, attack, mitre_execution, react2shell]
+
     - rule: Cryptominer Process Detected
       desc: Detects processes commonly used for cryptomining simulation
       condition: >
